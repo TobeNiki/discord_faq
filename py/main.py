@@ -1,6 +1,6 @@
 
 from typing import List
-from discordbot.config.config import load_token
+from config.config import load_token
 import discord
 from discord.commands import Option
 from py.content.indeces_management import Content_Management
