@@ -7,7 +7,7 @@ def load_token()->str:
     取得失敗した場合はプログラムを終了します
     """
     try:
-        with open('./discordbot/config/config.yml') as config_file:
+        with open('./py/config/config.yml') as config_file:
             config = yaml.safe_load(config_file)
             return config['DISCORD_BOT_TOKEN']
     except Exception as err:

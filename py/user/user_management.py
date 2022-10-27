@@ -4,20 +4,18 @@ import sqlite3
 
 db_name = "./headless_faq.db"
 
-class Database:
+
+def create_table(self):
+    cur = conn = sqlite3.connect(db_name)
+    cur.execute("CREATE TABLE user(name TEXt PRIMARY KEY, password TEXT)")
+    conn.commit()
+    conn.close()
+
+class User_Managemnt:
     def __init__(self) -> None:
-        self.conn = sqlite3.connect(db_name, isolation_level='DEFERRED')
-
-    def create_table(self):
-        cur = self.conn.cursor()
-        cur.execute("CREATE TABLE user(name TEXt PRIMARY KEY, password TEXT)")
-        self.conn.commit()
-        self.conn.close()
-
-class User_Managemtn(Database):
-    def __init__(self) -> None:
-        super().__init__()
-
+        self.conn  = sqlite3.connect(db_name, isolation_level='DEFERRED')
+    
+    
     @staticmethod
     def password2hash(password:str)->str:
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
@@ -44,30 +42,51 @@ class User_Managemtn(Database):
         ユーザの登録: \n
         """
         hashed_password = self.password2hash(password=password)
+        is_failed_regist_user = False
         try:
             cur = self.conn.cursor()
             cur.execute("INSERT INTO user(name, password) values(?, ?)", [name, hashed_password])
             self.conn.commit()
         except Exception:
+            is_failed_regist_user = True
             self.conn.rollback()
-    
         cur.close()
+
+        if is_failed_regist_user:
+            raise User_Management_Error("failed regist user")
+
+    def password_change(self, name:str, password:str):
+        """ユーザのパスワード変更"""
+        hashed_password = self.password2hash(password=password)
+        is_failed_password_change = False
+        try:
+            cur = self.conn.cursor()
+            cur.execute("UPDATE user SET password = ? WHERE name", [hashed_password, name])
+            self.conn.commit()
+        except Exception:
+            is_failed_password_change = True
+            self.conn.rollback()
+        
+        cur.close()
+        if is_failed_password_change:
+            raise User_Management_Error("failed password change")
 
     def delete_user (self, name:str, password:str):
         """
         ユーザの削除：
         """
         hashed_password = self.password2hash(password=password)
+        is_failed_delete_user = False
         try:
             cur = self.conn.cursor()
             cur.execute("DELETE FROM user WHERE name = ? AND password = ?", [name, hashed_password])
             self.conn.commit()
         except Exception:
+            is_failed_delete_user = True
             self.conn.rollback()
         
         cur.close()
-
-
-if __name__ == "__main__":
-    db = Database()
-    db.create_table()
+        if is_failed_delete_user:
+            raise User_Management_Error("failed delete user")
+class User_Management_Error(Exception):
+    pass

@@ -1,6 +1,4 @@
 
-from django.conf import settings
-
 
 index_name = "headlessfaq_content"
 

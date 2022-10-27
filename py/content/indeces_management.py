@@ -1,9 +1,10 @@
-
-from elasticsearch import Elasticsearch
+import asyncio
+from sre_constants import ANY
+from elasticsearch import Elasticsearch, helpers, AsyncElasticsearch
 from .indeces_schema import es_url, index_name
 import sys
 from .content_schema import Content
-from typing import List
+from typing import Any, List
 
 class Indeces_Management:
     """
@@ -37,7 +38,37 @@ class Content_Management(Indeces_Management):
             #返却内容のkey=>resultがcreatedでない場合、おかしい
             raise Content_Managment_Error("failed regist content to elastisearch")
         #{'_index': 'headlessfaq_content', '_id': 'bda45033-ba78-4408-a02e-f426d1873493', '_version': 1, 'result': 'created', '_shards': {'total': 2, 'successful': 1, 'failed': 0}, '_seq_no': 0, '_primary_term': 1}
-    
+
+    async def async_bulk_insert(self, bodies:Any):
+        """
+        非同期でコンテンツのbulkインサートを行う関数
+        Elasticsearchのバルクインサートは100MB制限がある
+        Paramater: 
+            bodies: List[Content] Contentの配列
+        """
+        asynces = AsyncElasticsearch(es_url)
+        
+        if not isinstance(bodies, list):
+            raise Content_Managment_Error("bodies is not list")
+
+        if isinstance(bodies[0], Content):
+            contents = [body.to_content() for body in bodies]
+        
+        elif isinstance(bodies[0], dict):
+            contents = bodies
+
+        async def generate_data():
+            for content in contents:
+                yield {
+                    "_op_type": "create",
+                    "_index": index_name,
+                    "_source": content
+                }
+
+        await helpers.async_bulk(asynces, generate_data())
+
+        await asynces.close()
+
     def update_content(self, body:Content):
         """コンテンツを更新"""
         result = self.es.update(
@@ -86,14 +117,14 @@ class Content_Management(Indeces_Management):
         if count is None:
             raise Content_Managment_Error("failed count content from index")
 
-    def delete_content(self, body:Content):
+    def delete_content(self, content_id:str):
         self.es.delete(
             index=index_name, 
-            id=body.content_id,
+            id=content_id,
             ignore=[404] #存在しないidの場合は無視する
         )
 
-        if self.es.exists(index=index_name, id=body.content_id):
+        if self.es.exists(index=index_name, id=content_id):
             #trueの場合消えてないということなので、おかしい
             raise Content_Managment_Error("faild delete content")
 

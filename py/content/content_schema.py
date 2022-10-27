@@ -65,6 +65,9 @@ class Content:
     
     def to_new_content(self)->dict:
         content = { "update_date": self.update_date }
+        
+        if self.regist_user != "":
+            content.setdefault("regist_user", self.regist_user)
 
         if self.category != "":
             content.setdefault("category",self.category)
